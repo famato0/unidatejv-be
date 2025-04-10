@@ -1,0 +1,412 @@
+openapi: 3.0.4
+info:
+  version: 1.0.0
+  title: API Tinder-like App
+  description: API REST per la gestione degli utenti
+tags:
+  - name: User
+    x-controller: UserApi
+    description: API per la gestione dei profili utente
+  - name: Match
+    x-controller: MatchApi
+    description: API per la gestione dei match tra utenti
+paths:
+  
+  /api/user/post/:
+    post:
+      summary: Registra un nuovo utente
+      description: Crea un nuovo profilo utente nel sistema
+      operationId: createUser
+      tags:
+        - User
+      requestBody:
+        description: Dati per la registrazione utente
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserRequest'
+      responses:
+        '201':
+          description: Utente creato con successo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '400':
+          description: Richiesta non valida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Conflitto (email/username già esistente)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/user/put/{userId}:
+    put:
+      summary: Aggiorna un utente esistente
+      description: Modifica i dati di un profilo utente
+      operationId: updateUser
+      tags:
+        - User
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: ID univoco dell'utente
+      requestBody:
+        description: Dati aggiornati dell'utente
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserRequest'
+      responses:
+        '200':
+          description: Utente aggiornato con successo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '400':
+          description: Richiesta non valida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Utente non trovato
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  
+  /api/user/get/{userId}:
+    get:
+      summary: Recupera un utente per ID
+      description: Restituisce i dettagli completi di un utente specifico
+      operationId: getUserById
+      tags:
+        - User
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: ID univoco dell'utente
+      responses:
+        '200':
+          description: Dettagli utente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '404':
+          description: Utente non trovato
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/users/search:
+    get:
+      summary: Cerca utenti per preferenze
+      description: Restituisce una lista di utenti che corrispondono alle preferenze di ricerca
+      operationId: getUserByPreferences
+      tags:
+        - User
+      parameters:
+        - name: minAge
+          in: query
+          schema:
+            type: integer
+            minimum: 18
+            maximum: 100
+            default: 18
+          description: Età minima
+        - name: maxAge
+          in: query
+          schema:
+            type: integer
+            minimum: 18
+            maximum: 100
+            default: 99
+          description: Età massima
+        - name: gender
+          in: query
+          schema:
+            type: array
+            items:
+              type: string
+              enum: [MALE, FEMALE, NON_BINARY, TRANSGENDER, GENDERQUEER, GENDERFLUID, AGENDER, BIGENDER, OTHER]
+          style: form
+          explode: true
+          description: Generi interessati (array)
+        - name: maxDistance
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 1000
+            default: 50
+          description: Distanza massima in km
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+          description: Numero pagina (paginazione)
+        - name: size
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+          description: Dimensione pagina
+      responses:
+        '200':
+          description: Lista di utenti corrispondenti
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  content:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/UserResponse'
+                  page:
+                    type: integer
+                    example: 0
+                  size:
+                    type: integer
+                    example: 20
+                  totalElements:
+                    type: integer
+                    example: 1
+        '400':
+          description: Parametri di ricerca non validi
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  
+  /api/users/{userId}:
+    delete:
+      summary: Cancella un utente
+      description: Elimina permanentemente un profilo utente e tutti i dati associati
+      operationId: deleteUser
+      tags:
+        - User
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: ID univoco dell'utente da eliminare
+      responses:
+        '204':
+          description: Utente eliminato con successo (no content)
+        '401':
+          description: Non autorizzato
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Utente non trovato
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Errore durante l'eliminazione
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  
+  /api/matches/{matchId}:
+    delete:
+      summary: Elimina un match
+      description: Disattiva o elimina definitivamente un abbinamento tra utenti
+      operationId: deleteMatch
+      tags:
+        - Match
+      parameters:
+        - name: matchId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: ID univoco del match da eliminare
+        - name: hardDelete
+          in: query
+          schema:
+            type: boolean
+            default: false
+          description: Se true, elimina definitivamente invece di disattivare
+      responses:
+        '204':
+          description: Match eliminato/disattivato con successo
+        '400':
+          description: Richiesta non valida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Operazione non permessa per l'utente corrente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Match non trovato
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  
+components:
+  schemas:
+    UserRequest:
+      type: object
+      required:
+        - username
+        - email
+        - password
+        - birthDate
+        - gender
+        - interestedIn
+      properties:
+        username:
+          type: string
+          example: "john_doe"
+          minLength: 2
+          maxLength: 30
+        email:
+          type: string
+          format: email
+          example: "john.doe@example.com"
+        password:
+          type: string
+          format: password
+          example: "SecurePassword123!"
+          minLength: 8
+        bio:
+          type: string
+          example: "Appassionato di viaggi e fotografia"
+          maxLength: 100
+        birthDate:
+          type: string
+          format: date
+          example: "1990-05-15"
+        gender:
+          type: string
+          enum: [MALE, FEMALE, NON_BINARY, TRANSGENDER, GENDERQUEER, GENDERFLUID, AGENDER, BIGENDER, OTHER]
+          example: "MALE"
+        interestedIn:
+          type: array
+          items:
+            type: string
+            enum: [MALE, FEMALE, NON_BINARY, TRANSGENDER, GENDERQUEER, GENDERFLUID, AGENDER, BIGENDER, OTHER]
+          example: ["FEMALE", "NON_BINARY"]
+        hobbies:
+          type: array
+          items:
+            type: string
+          example: ["Viaggi", "Fotografia"]
+
+    UserResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "507f1f77bcf86cd799439011"
+        username:
+          type: string
+          example: "john_doe"
+        email:
+          type: string
+          example: "john.doe@example.com"
+        bio:
+          type: string
+          example: "Appassionato di viaggi e fotografia"
+        age:
+          type: integer
+          example: 32
+        gender:
+          type: string
+          example: "MALE"
+        interestedIn:
+          type: array
+          items:
+            type: string
+          example: ["FEMALE", "NON_BINARY"]
+        hobbies:
+          type: array
+          items:
+            type: string
+          example: ["Viaggi", "Fotografia"]
+        verified:
+          type: boolean
+          example: false
+        createdAt:
+          type: string
+          format: date-time
+          example: "2023-05-15T10:00:00Z"
+    UserSearchResponse:
+      type: object
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserResponse'
+        page:
+          type: integer
+          example: 0
+        size:
+          type: integer
+          example: 20
+        totalElements:
+          type: integer
+          example: 1
+        totalPages:
+          type: integer
+          example: 1
+    Error:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
+        error:
+          type: string
+        message:
+          type: string
+        path:
+          type: string
+      example:
+        timestamp: "2023-05-15T10:00:00Z"
+        status: 404
+        error: "Not Found"
+        message: "Match non trovato"
+        path: "/api/matches/12345"
+x-swagger-router-controller: 
+  User: com.yourpackage.api.UserApi
+  Match: com.yourpackage.api.MatchApi
+
+x-group-parameters: true
